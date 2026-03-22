@@ -321,3 +321,39 @@ Total items: 6
 Total rentals: 3
 Available items: 6
 Active rentals: 2
+```
+
+# How To Run The Application
+In terminal, while being in the project root directory, run the command 
+```
+dotnet run
+```
+and enjoy!
+
+# Design decisions
+
+1. Class Responsibilities
+
+I split the project into a few clear layers so that each class has only one main job:
+
+  - Models (User, Equipment, RentalAct) are designed to simply model and store data. None of those conducts any calculations
+  - RentalUI: This class is completely in charge of the console text and console UI. It prints the menus and reads the user's input, but it doesn't make any business decisions.
+  - RentalService: This handles the actual business rules. If we need to check if a student has too many active rentals, or calculate a penalty fee for a late return, it happens here.
+  - RentalPolicy: defines such constants as maximum rentals for each user type, etc.
+  - RentalRepository: used for storing and managing actual users, equipment inventory, rentals
+  - Seeder: used for repository prepopulation
+
+2. Reducing Coupling
+
+I wanted to make sure the classes weren't too tightly connected. For example, RentalUI doesn't create its own data lists or its own service. Instead, I create the RentalRepository and RentalService first, and then pass them into the UI's constructor. This means the UI just uses whatever service it is given, making the code much easier to change or test later without breaking the menu system.
+
+3. Cohesion
+
+While building the UI, I noticed I was writing the same for loops every time I needed the user to pick an item, a user, or a rental from a list. To keep related code together (high cohesion) and avoid repeating myself, I created a generic helper method called GetSelection<T>. Now, all the logic for printing a numbered list and safely reading the user's choice lives in one single place.
+
+4. Separating Physical Status from Rental Status
+
+One of my main domain design choices was how to handle whether an item is "Available". I realized that an item being physically broken is different from an item being actively rented.
+Because of this, the Equipment.IsAvailable boolean is only used for damage/broken item. To figure out if an item can actually be rented right now, the system checks if it is physically okay AND checks the repository to make sure nobody else currently holds it (!_repository.IsCurrentlyRented(e)). This prevents bugs where we might return an item but forget to flip a status boolean back to true.
+  
+
