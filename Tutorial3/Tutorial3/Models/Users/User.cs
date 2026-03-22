@@ -6,6 +6,7 @@ public abstract class User
     public string Name { get; set; }
     public string Surname { get; set; }
     public string Email { get; set; }
+    public abstract string UserType { get; }
     
     protected  User(string name, string surname, string email)
     {
