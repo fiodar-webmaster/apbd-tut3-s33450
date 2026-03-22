@@ -10,7 +10,6 @@
     <ItemGroup>
       <Folder Include="Data\" />
       <Folder Include="Logic\" />
-      <Folder Include="Models\Users\" />
       <Folder Include="UI\" />
     </ItemGroup>
 
