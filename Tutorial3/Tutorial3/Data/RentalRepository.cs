@@ -24,7 +24,12 @@ public class RentalRepository
         _rentals.Add(rental);
     }
 
-    public List<User> GetUsers() => _users;
+    public bool IsCurrentlyRented(Equipment item)
+    {
+        return _rentals.Any(r => r.BorrowedItem.Id == item.Id && r.ReturnDate == null); 
+    }
+
+public List<User> GetUsers() => _users;
     
     public List<Equipment> GetEquipment() => _equipment;
 

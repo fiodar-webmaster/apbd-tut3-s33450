@@ -11,13 +11,19 @@ public class RentalService
     {
         _repository = repository;
     }
-    
-    
+
+
     public bool RentItem(User user, Equipment item, DateTime borrowDate, DateTime dueDate)
     {
         int activeUserRentals = _repository.GetActiveRentalsForUser(user).Count;
-        if (activeUserRentals < (user is Student ? RentalPolicy.MaxStudentRentals : RentalPolicy.MaxEmployeeRentals)
-            && item.IsAvailable)
+        bool allowedAnotherBorrowing = activeUserRentals <
+                                       (user is Student
+                                           ? RentalPolicy.MaxStudentRentals
+                                           : RentalPolicy.MaxEmployeeRentals);
+        bool notRented = !_repository.IsCurrentlyRented(item);
+        bool notDamaged = item.IsAvailable;
+
+        if (allowedAnotherBorrowing && notDamaged && notRented)
         {
             _repository.AddRental(new RentalAct(user,  item, borrowDate, dueDate));
             return true;

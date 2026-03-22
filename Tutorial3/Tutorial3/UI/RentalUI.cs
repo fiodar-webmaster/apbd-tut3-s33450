@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Xml;
+﻿using System.Xml;
 using Tutorial3.Logic;
 using Tutorial3.Models.Equipment;
 using Tutorial3.Models.Users;
@@ -10,7 +9,7 @@ public class RentalUI
 {
     private RentalRepository _repository;
     private RentalService _service;
-    private bool run = true;
+    private bool _run = true;
 
     public RentalUI(RentalRepository repository, RentalService service)
     {
@@ -20,11 +19,11 @@ public class RentalUI
 
     public void Run()
     {
-        while (run)
+        while (_run)
         {
             DisplayMenu();
             string line = Console.ReadLine();
-
+            
             switch (line)
             {
                 case "1": HandleAddUser(); break;
@@ -38,6 +37,7 @@ public class RentalUI
                 case "9": DisplayOverDueRentals(); break;
                 case "10" : DisplayReport(); break;
                 case "11" : Exit(); break;
+                default: Console.WriteLine("Invalid option. Please try again."); break;
             }
 
         }
@@ -45,6 +45,7 @@ public class RentalUI
 
     public void DisplayMenu()
     {
+        Console.WriteLine("======");
         Console.WriteLine("Available commands:");
         Console.WriteLine("1. Add a new user to the system.");
         Console.WriteLine("2. Add a new equipment item of a selected type.");
@@ -57,8 +58,37 @@ public class RentalUI
         Console.WriteLine("9. Display the list of overdue rentals.");
         Console.WriteLine("10. Generate a short summary report of the rental service state.");
         Console.WriteLine("11. Exit");
+        Console.WriteLine("======");
+        
     }
 
+
+    private T? GetSelection<T>(List<T> list, string message)
+    {
+        if (list.Count == 0) return default;
+        Console.WriteLine(message);
+        for (int i = 0; i < list.Count; i++)
+        {
+            string info = list[i] switch
+            {
+                User u => $"{u.Name} {u.Surname} ({u.GetType().Name})",
+                Equipment e => $"{e.Name} ({e.GetType().Name})",
+                RentalAct r => $"{r.BorrowedItem.Name} (Rented by {r.Borrower.Name} {r.Borrower.Surname})",
+                _ => list[i]?.ToString() ?? ""
+            };
+            Console.WriteLine($"{i+1}. {info}");
+        }
+
+        Console.WriteLine("Enter selection number: ");
+        int choice = int.Parse(Console.ReadLine());
+        if (choice > 0 && choice <= list.Count)
+        {
+            return list[choice - 1];
+        }
+        return default;
+    }
+    
+    
     public void HandleAddUser()
     {
         Console.WriteLine("Select user type:");
@@ -139,84 +169,80 @@ public class RentalUI
 
         foreach (var equipment in _repository.GetEquipment())
         {
-            Console.WriteLine(equipment.Name + (equipment.IsAvailable ? " (available)" : " (not available)"));
+            string physicalCondition = equipment.IsAvailable ? "Good condition" : "Damaged/Broken";
+            string isRented = _repository.IsCurrentlyRented(equipment) ? "Is being rented currently" : "Ready for rent";
+            Console.WriteLine($"Item name: {equipment.Name}");
+            Console.WriteLine($"Item type: {equipment.GetType().Name}");
+            Console.WriteLine($"Item physical condition: {physicalCondition}");
+            Console.WriteLine($"Rental status: {isRented}");
+            Console.WriteLine("=======");
+            
         }
     }
 
     public void HandleDisplayAvailableEquipment()
     {
-        bool noAvailableEquipment = true;
-        foreach (var equipment in _repository.GetEquipment())
-        {
-            if (equipment.IsAvailable)
-            {
-                Console.WriteLine(equipment.Name);
-                noAvailableEquipment = false;
-            }
-        }
 
-        if (noAvailableEquipment)
+        var availableForRental = _repository.GetEquipment()
+            .Where(e => e.IsAvailable && !_repository.IsCurrentlyRented(e))
+            .ToList();
+
+        if (availableForRental.Count == 0)
         {
             Console.WriteLine("No equipment available currently");
+            return;
+        }
+
+        Console.WriteLine("Available equipment:");
+        foreach (var item in availableForRental)
+        {
+            Console.WriteLine($"{item.Name} ({item.GetType().Name})");
         }
     }
 
     public void RentEquipmentToUser()
     {
-        var users = _repository.GetUsers();
-        if (users.Count == 0)
+
+        var selectedUser = GetSelection(_repository.GetUsers(), "Select a user:");
+        if (selectedUser == null)
         {
-            Console.WriteLine("No users available. Add a user first. Returning to the main menu.");
+            Console.WriteLine("No user selected. Returning to the main menu");
+            return;
+        }
+        
+        var availableItems = _repository.GetEquipment()
+            .Where(e => e.IsAvailable && !_repository.IsCurrentlyRented(e))
+            .ToList();
+
+        var selectedItem = GetSelection(availableItems, "Select a item:");
+        if (selectedItem == null)
+        {
+            Console.WriteLine("No item selected. Returning to the main menu");
             return;
         }
 
-        Console.WriteLine("Select a user");
-        for (int i = 0; i < users.Count; i++)
+        Console.WriteLine("Enter rental duration (days):");
+        int days = int.Parse(Console.ReadLine());
+
+        if (days < 1 || days > RentalPolicy.MaxRentalPeriod)
         {
-            Console.WriteLine($"{i + 1} : {users[i].Name} {users[i].Surname} ({users[i].GetType().Name})");
+            days = RentalPolicy.MaxRentalPeriod;
         }
+        
+        DateTime borrowedDate = DateTime.Now;
+        DateTime dueDate = borrowedDate.AddDays(days);
 
-        int userChoice = int.Parse(Console.ReadLine());
-        if (userChoice < 1 || userChoice > users.Count)
+        bool SuccessfulRent = _service.RentItem(selectedUser, selectedItem, borrowedDate, dueDate);
+
+        if (SuccessfulRent)
         {
-            Console.WriteLine("Invalid selection. Returning to the main menu.");
-            return;
+            Console.WriteLine("Rental registered!");
         }
-
-        var selectedUser = users[userChoice - 1];
-
-        var equipment = _repository.GetEquipment();
-        if (equipment.Count == 0)
-        {
-            Console.WriteLine("No equipment available. Add an item first. Returning to the main menu.");
-            return;
-        }
-
-        Console.WriteLine("Select an equipment item");
-
-        for (int i = 0; i < equipment.Count; i++)
-        {
-            Console.WriteLine($"{i + 1} : {equipment[i].Name} {equipment[i].GetType().Name}");
-        }
-
-        int itemChoice = int.Parse(Console.ReadLine());
-        if (itemChoice < 1 || itemChoice > equipment.Count)
-        {
-            Console.WriteLine("Invalid selection. Returning to the main menu.");
-            return;
-        }
-
-        var selectedItem = equipment[itemChoice - 1];
-
-        Console.Write("Enter rent period (days)");
-        DateTime dueDate = DateTime.Now.AddDays(int.Parse(Console.ReadLine()));
-
-        bool successfulRent = _service.RentItem(selectedUser, selectedItem, DateTime.Now, dueDate);
-
-        if (successfulRent) Console.WriteLine("Success! Returning to the main menu.");
         else
-            Console.WriteLine("Rental could not be completed. Possible reasons: too many active rentals for this user");
-
+        {
+            Console.WriteLine("Rental not registered! User has too many active rentals");
+        }
+        
     }
 
     public void ReturnEquipment()
@@ -224,90 +250,46 @@ public class RentalUI
         var activeRentals = _repository.GetRentals().Where(r => r.ReturnDate == null).ToList();
         if (activeRentals.Count == 0)
         {
-            Console.WriteLine("No currently active rentals");
+            Console.WriteLine("Nothing to return. Returning to the main menu");
             return;
         }
-
-        Console.WriteLine("Select a rental to return");
-        for (int i = 0; i < activeRentals.Count; i++)
+        
+        var selectedRental = GetSelection(activeRentals, "Select a rental:");
+        if (selectedRental == null)
         {
-            var rental = activeRentals[i];
-            Console.WriteLine(
-                $"{i + 1} {rental.BorrowedItem.Name}  ({rental.Borrower.Name} {rental.Borrower.Surname}) due to {rental.DueDate}");
-        }
-
-        int rentalNumber = int.Parse(Console.ReadLine());
-        if (rentalNumber < 1 || rentalNumber > activeRentals.Count)
-        {
-            Console.WriteLine("Invalid selection. Returning to the main menu.");
+            Console.WriteLine("No rental selected. Returning to the main menu");
             return;
         }
-
-        var selectedRental = activeRentals[rentalNumber - 1];
         _service.ReturnItem(selectedRental, DateTime.Now);
-
         Console.WriteLine($"Rental returned. Fee: {selectedRental.Fee}");
 
     }
 
     public void ToggleAvailability()
     {
+        var selectedItem =  GetSelection(_repository.GetEquipment(), "Select an item to toggle availability (damaged/fixed):");
 
-        Console.WriteLine("Select an equipment item to mark unavailable.");
-
-        var equipment = _repository.GetEquipment();
-        if (equipment.Count == 0)
+        if (selectedItem == null)
         {
-            Console.WriteLine("No equipment available. Add an item first. Returning to the main menu.");
+            Console.WriteLine("No item was selected. Returning to the main menu");
             return;
         }
-
-        Console.WriteLine("Select an equipment item");
-
-        for (int i = 0; i < equipment.Count; i++)
-        {
-            Console.WriteLine(
-                $"{i + 1} : {equipment[i].Name} {equipment[i].GetType().Name}  ({(equipment[i].IsAvailable ? "available" : "not available")})");
-        }
-
-        int itemChoice = int.Parse(Console.ReadLine());
-        if (itemChoice < 1 || itemChoice > equipment.Count)
-        {
-            Console.WriteLine("Invalid selection. Returning to the main menu.");
-            return;
-        }
-
-        var selectedItem = equipment[itemChoice - 1];
-
+        
         selectedItem.IsAvailable = !selectedItem.IsAvailable;
-        Console.WriteLine($"{selectedItem.Name} is now {(selectedItem.IsAvailable ? "available" : "not available")}");
+        Console.WriteLine($"Successfully changed availability of {selectedItem.Name} to {selectedItem.IsAvailable})");
 
     }
 
     public void DisplayActiveRentalsForUser()
     {
-        var users = _repository.GetUsers();
-        if (users.Count == 0)
+        
+        var selectedUser = GetSelection(_repository.GetUsers(), "Select a user:");
+        if (selectedUser == null)
         {
-            Console.WriteLine("No users available. Add a user first. Returning to the main menu.");
+            Console.WriteLine("None of the users was selected. Returning to the main menu.");
             return;
         }
-
-        Console.WriteLine("Select a user");
-        for (int i = 0; i < users.Count; i++)
-        {
-            Console.WriteLine($"{i + 1} : {users[i].Name} {users[i].Surname} ({users[i].GetType().Name})");
-        }
-
-        int userChoice = int.Parse(Console.ReadLine());
-        if (userChoice < 1 || userChoice > users.Count)
-        {
-            Console.WriteLine("Invalid selection. Returning to the main menu.");
-            return;
-        }
-
-        var selectedUser = users[userChoice - 1];
-
+        
         var activeRentals = _repository.GetActiveRentalsForUser(selectedUser);
 
         if (activeRentals.Count == 0)
@@ -318,7 +300,7 @@ public class RentalUI
 
         foreach (var activeRental in activeRentals)
         {
-            Console.WriteLine($"{activeRental.BorrowedItem} with due date: {activeRental.DueDate}");
+            Console.WriteLine($"{activeRental.BorrowedItem.Name} with due date: {activeRental.DueDate}");
         }
     }
 
@@ -355,7 +337,6 @@ public class RentalUI
     public void Exit()
     {
         Console.WriteLine("Shutting the system down...");
-        run = false;
+        _run = false;
     }
-
 }

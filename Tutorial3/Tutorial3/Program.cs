@@ -1,6 +1,4 @@
 ﻿using Tutorial3.Logic;
-using Tutorial3.Models.Equipment;
-using Tutorial3.Models.Users;
 using Tutorial3.UI;
 
 Console.WriteLine("Welcome to the equipment rental service!");
@@ -11,9 +9,3 @@ Seeder.Seed(repository);
 
 var ui = new RentalUI(repository, service);
 ui.Run();
-
-
-
-
-
- 
