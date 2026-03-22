@@ -20,7 +20,6 @@ public class RentalService
             && item.IsAvailable)
         {
             _repository.AddRental(new RentalAct(user,  item, borrowDate, dueDate));
-            item.IsAvailable = false;
             return true;
         }
         return false;
@@ -29,7 +28,6 @@ public class RentalService
     public void ReturnItem(RentalAct rental, DateTime returnDate)
     {
         rental.ReturnDate = returnDate;
-        rental.BorrowedItem.IsAvailable = true;
         if (returnDate.Date > rental.DueDate.Date)
         {
             TimeSpan difference = returnDate.Date - rental.DueDate.Date;
