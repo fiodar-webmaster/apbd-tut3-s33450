@@ -109,6 +109,8 @@ public class RentalUI
 
         if (userType == "1") _repository.AddUser(new Student(firstName, lastName, email));
         else _repository.AddUser(new Employee(firstName, lastName, email));
+
+        Console.WriteLine("User added successfully!");
     }
 
     public void HandleAddEquipment()
@@ -156,6 +158,8 @@ public class RentalUI
         }
 
         else Console.WriteLine("Invalid equipment type. Returning to the main menu");
+        
+        Console.WriteLine("Item added successfully!");
     }
 
     public void HandleDisplayAllEquipment()
@@ -166,6 +170,8 @@ public class RentalUI
             Console.WriteLine("No equipment found");
             return;
         }
+
+        Console.WriteLine("All equipment:");
 
         foreach (var equipment in _repository.GetEquipment())
         {
@@ -298,6 +304,7 @@ public class RentalUI
             return;
         }
 
+        Console.WriteLine($"Active rentals for the user {selectedUser.Name} {selectedUser.Surname}:");
         foreach (var activeRental in activeRentals)
         {
             Console.WriteLine($"{activeRental.BorrowedItem.Name} with due date: {activeRental.DueDate}");
@@ -315,7 +322,8 @@ public class RentalUI
             Console.WriteLine("No overdue rentals found in the system");
             return;
         }
-        
+
+        Console.WriteLine("Overdue rentals:");
         foreach (var r in overdueRentals)
         {
             int daysLate = (DateTime.Now.Date - r.DueDate.Date).Days;
