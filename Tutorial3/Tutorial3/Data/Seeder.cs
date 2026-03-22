@@ -18,5 +18,9 @@ public class Seeder
         repository.AddUser(new Student("Fiodar", "Klimovich", "s33450@pjwstk.edu.pl"));
         repository.AddUser(new Employee("John", "Brown", "johnbrown@outlook.com"));
         repository.AddUser(new Employee("Keanu", "Reeves", "realjohnwick@gmail.com"));
+
+        var student = new Student("James", "May", "jamesgin@gmail.com");
+        var item = new Projector("Philips Ultra 200", 220, true);
+        repository.AddRental(new RentalAct(student, item, DateTime.Now.AddDays(-4), DateTime.Now.AddDays(-2)));
     }
 }
