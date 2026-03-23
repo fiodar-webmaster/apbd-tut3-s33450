@@ -357,3 +357,8 @@ One of my main domain design choices was how to handle whether an item is "Avail
 Because of this, the Equipment.IsAvailable boolean is only used for damage/broken item. To figure out if an item can actually be rented right now, the system checks if it is physically okay AND checks the repository to make sure nobody else currently holds it (!_repository.IsCurrentlyRented(e)). This prevents bugs where we might return an item but forget to flip a status boolean back to true.
   
 
+# Branching
+
+Several branches were used in this project, as the requirements dictate so. Since merges were fast-forward, they did not require additional commits and are not displayed in the logs. However, here are the branches I worked on:
+<br/><br/>
+<img width="210" height="75" alt="image" src="https://github.com/user-attachments/assets/b0c4ad8a-7447-4d0b-9c3e-91aada572f00" />
